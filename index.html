@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Q&A Platform</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Document Q&A Platform</h1>
+            <p>Upload documents and ask questions in any language</p>
+        </header>
+
+        <main>
+            <section class="upload-section">
+                <h2>Document Upload</h2>
+                <div class="upload-container">
+                    <input type="file" id="document-upload" accept=".txt,.pdf,.doc,.docx">
+                    <button id="upload-btn">Upload Document</button>
+                </div>
+                <div id="upload-status"></div>
+            </section>
+
+            <section class="qa-section">
+                <h2>Ask Questions</h2>
+                <div class="model-selection">
+                    <label for="ai-model">Select AI Model:</label>
+                    <select id="ai-model">
+                        <option value="llama">Llama</option>
+                        <option value="deepseek">DeepSeek</option>
+                    </select>
+                </div>
+
+                <div class="question-input">
+                    <textarea id="question" placeholder="Type your question here..."></textarea>
+                    <button id="ask-btn">Ask Question</button>
+                </div>
+
+                <div class="answer-container">
+                    <h3>Answer</h3>
+                    <div id="answer-box"></div>
+                    <div id="metadata">
+                        <span id="language-detected"></span>
+                        <span id="model-used"></span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // File upload handling
+        document.getElementById('upload-btn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('document-upload');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file first');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('http://localhost:5000/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                document.getElementById('upload-status').textContent = 
+                    response.ok ? 'File uploaded successfully!' : `Error: ${result.error}`;
+            } catch (error) {
+                document.getElementById('upload-status').textContent = 
+                    `Error uploading file: ${error.message}`;
+            }
+        });
+
+        // Question handling
+        document.getElementById('ask-btn').addEventListener('click', async () => {
+            const question = document.getElementById('question').value;
+            const model = document.getElementById('ai-model').value;
+            const fileInput = document.getElementById('document-upload');
+            
+            if (!question || !fileInput.files[0]) {
+                alert('Please enter a question and upload a document');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:5000/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        document_name: fileInput.files[0].name,
+                        model: model
+                    })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    document.getElementById('answer-box').textContent = result.answer;
+                    document.getElementById('language-detected').textContent = 
+                        `Language: ${result.language}`;
+                    document.getElementById('model-used').textContent = 
+                        `Model: ${result.model}`;
+                } else {
+                    document.getElementById('answer-box').textContent = 
+                        `Error: ${result.error}`;
+                }
+            } catch (error) {
+                document.getElementById('answer-box').textContent = 
+                    `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>
